@@ -4,18 +4,6 @@ provider "kubernetes" {
   token                  = data.aws_eks_cluster_auth.aptos.token
 }
 
-resource "kubernetes_storage_class" "io1" {
-  metadata {
-    name = "io1"
-  }
-  storage_provisioner = "kubernetes.io/aws-ebs"
-  volume_binding_mode = "WaitForFirstConsumer"
-  parameters = {
-    type      = "io1"
-    iopsPerGB = "50"
-  }
-}
-
 resource "null_resource" "delete-gp2" {
   provisioner "local-exec" {
     command = <<-EOT
@@ -23,25 +11,22 @@ resource "null_resource" "delete-gp2" {
       kubectl --kubeconfig ${local.kubeconfig} delete --ignore-not-found storageclass gp2
     EOT
   }
-
-  depends_on = [kubernetes_storage_class.io1]
 }
 
-
-resource "kubernetes_storage_class" "gp2" {
+resource "kubernetes_storage_class" "gp3" {
   metadata {
-    name = "gp2"
+    name = "gp3"
     annotations = {
-      "storageclass.kubernetes.io/is-default-class" = true
+      "storageclass.kubernetes.io/is-default-class" = false
     }
   }
-  storage_provisioner = "kubernetes.io/aws-ebs"
+  storage_provisioner = "ebs.csi.aws.com"
   volume_binding_mode = "WaitForFirstConsumer"
   parameters = {
-    type = "gp2"
+    type = "gp3"
   }
 
-  depends_on = [null_resource.delete-gp2]
+  depends_on = [null_resource.delete-gp2, aws_eks_addon.aws-ebs-csi-driver]
 }
 
 resource "kubernetes_role_binding" "psp-kube-system" {
@@ -92,11 +77,22 @@ provider "helm" {
   }
 }
 
+resource "kubernetes_namespace" "tigera-operator" {
+  metadata {
+    annotations = {
+      name = "tigera-operator"
+    }
+
+    name = "tigera-operator"
+  }
+}
+
 resource "helm_release" "calico" {
-  name        = "calico"
-  namespace   = "kube-system"
-  chart       = "${path.module}/aws-calico/"
-  max_history = 10
+  name       = "calico"
+  repository = "https://docs.projectcalico.org/charts"
+  chart      = "tigera-operator"
+  version    = "3.23.3"
+  namespace  = "tigera-operator"
 }
 
 locals {
@@ -112,7 +108,7 @@ locals {
     validator = {
       name = var.validator_name
       storage = {
-        class = kubernetes_storage_class.gp2.metadata[0].name
+        class = kubernetes_storage_class.gp3.metadata[0].name
       }
       nodeSelector = {
         "eks.amazonaws.com/nodegroup" = "validators"
@@ -126,7 +122,7 @@ locals {
     }
     fullnode = {
       storage = {
-        class = kubernetes_storage_class.gp2.metadata[0].name
+        class = kubernetes_storage_class.gp3.metadata[0].name
       }
       nodeSelector = {
         "eks.amazonaws.com/nodegroup" = "validators"
@@ -241,7 +237,7 @@ resource "helm_release" "monitoring" {
       monitoring = {
         prometheus = {
           storage = {
-            class = kubernetes_storage_class.gp2.metadata[0].name
+            class = kubernetes_storage_class.gp3.metadata[0].name
           }
         }
       }
