@@ -10,6 +10,7 @@ pub mod signature;
 pub mod transaction_context;
 pub mod type_info;
 pub mod util;
+pub mod ristretto255;
 
 use move_deps::{
     move_core_types::{account_address::AccountAddress, identifier::Identifier},
@@ -27,6 +28,7 @@ pub mod status {
 pub struct GasParameters {
     pub account: account::GasParameters,
     pub signature: signature::GasParameters,
+    pub ristretto255: ristretto255::GasParameters,
     pub hash: hash::GasParameters,
     pub type_info: type_info::GasParameters,
     pub util: util::GasParameters,
@@ -41,6 +43,12 @@ impl GasParameters {
             account: account::GasParameters {
                 create_address: account::CreateAddressGasParameters { base_cost: 0 },
                 create_signer: account::CreateSignerGasParameters { base_cost: 0 },
+            },
+            ristretto255: ristretto255::GasParameters {
+                is_canonical: ristretto255::Ristretto255ScalarIsCanonicalGasParameters {
+                    base_cost: 0,
+                    per_point_deserialize_cost: 0
+                }
             },
             signature: signature::GasParameters {
                 // BLS signatures over BLS12-381 curves
@@ -188,6 +196,7 @@ pub fn all_natives(
 
     add_natives_from_module!("account", account::make_all(gas_params.account));
     add_natives_from_module!("signature", signature::make_all(gas_params.signature));
+    add_natives_from_module!("ristretto255", ristretto255::make_all(gas_params.ristretto255));
     add_natives_from_module!("hash", hash::make_all(gas_params.hash));
     add_natives_from_module!("type_info", type_info::make_all(gas_params.type_info));
     add_natives_from_module!("util", util::make_all(gas_params.util));

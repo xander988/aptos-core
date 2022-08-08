@@ -12,7 +12,8 @@ use move_deps::{
     },
 };
 use smallvec::smallvec;
-use std::{collections::VecDeque, convert::TryFrom, sync::Arc};
+use std::{collections::VecDeque, convert::TryFrom};
+use crate::natives::util::make_native_from_func;
 
 /// Returns the equivalent of a Move std::option::none() natively in Rust.
 /// TODO: vector_for_testing_only is not an API we conceptually support and misusing it could cause the VM to crash.
@@ -220,13 +221,6 @@ fn native_bls12381_aggregate_pop_verified_pubkeys(
         cost,
         smallvec![some_option(aggpk.to_bytes().to_vec())],
     ))
-}
-
-pub fn make_native<T: std::marker::Send + std::marker::Sync + 'static>(
-    gas_params: T,
-    func: fn(&T, &mut NativeContext, Vec<Type>, VecDeque<Value>) -> PartialVMResult<NativeResult>,
-) -> NativeFunction {
-    Arc::new(move |context, ty_args, args| func(&gas_params, context, ty_args, args))
 }
 
 /***************************************************************************************************
@@ -952,63 +946,63 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         // BLS over BLS12-381
         (
             "bls12381_aggregate_pop_verified_pubkeys",
-            make_native(
+            make_native_from_func(
                 gas_params.bls12381_aggregate_pop_verified_pubkeys,
                 native_bls12381_aggregate_pop_verified_pubkeys,
             ),
         ),
         (
             "bls12381_aggregate_signatures",
-            make_native(
+            make_native_from_func(
                 gas_params.bls12381_aggregate_signatures,
                 native_bls12381_aggregate_signatures,
             ),
         ),
         (
             "bls12381_signature_subgroup_check",
-            make_native(
+            make_native_from_func(
                 gas_params.bls12381_signature_subgroup_check,
                 native_bls12381_signature_subgroup_check,
             ),
         ),
         (
             "bls12381_validate_pubkey",
-            make_native(
+            make_native_from_func(
                 gas_params.bls12381_validate_pubkey,
                 native_bls12381_validate_pubkey,
             ),
         ),
         (
             "bls12381_verify_aggregate_signature",
-            make_native(
+            make_native_from_func(
                 gas_params.bls12381_verify_aggregate_signature,
                 native_bls12381_verify_aggregate_signature,
             ),
         ),
         (
             "bls12381_verify_multisignature",
-            make_native(
+            make_native_from_func(
                 gas_params.bls12381_verify_multisignature,
                 native_bls12381_verify_multisignature,
             ),
         ),
         (
             "bls12381_verify_normal_signature",
-            make_native(
+            make_native_from_func(
                 gas_params.bls12381_verify_normal_signature,
                 native_bls12381_verify_normal_signature,
             ),
         ),
         (
             "bls12381_verify_proof_of_possession",
-            make_native(
+            make_native_from_func(
                 gas_params.bls12381_verify_proof_of_possession,
                 native_bls12381_verify_proof_of_possession,
             ),
         ),
         (
             "bls12381_verify_signature_share",
-            make_native(
+            make_native_from_func(
                 gas_params.bls12381_verify_signature_share,
                 native_bls12381_verify_signature_share,
             ),
@@ -1016,19 +1010,19 @@ pub fn make_all(gas_params: GasParameters) -> impl Iterator<Item = (String, Nati
         // Ed25519
         (
             "ed25519_validate_pubkey",
-            make_native(
+            make_native_from_func(
                 gas_params.ed25519_validate_pubkey,
                 native_ed25519_validate_pubkey,
             ),
         ),
         (
             "ed25519_verify",
-            make_native(gas_params.ed25519_verify, native_ed25519_verify),
+            make_native_from_func(gas_params.ed25519_verify, native_ed25519_verify),
         ),
         // ECDSA over secp256k1
         (
             "secp256k1_ecdsa_recover",
-            make_native(
+            make_native_from_func(
                 gas_params.secp256k1_ecdsa_recover,
                 native_secp256k1_ecdsa_recover,
             ),

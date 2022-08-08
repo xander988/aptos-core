@@ -15,6 +15,13 @@ use std::{collections::VecDeque, sync::Arc};
 /// Abort code when from_bytes fails (0x03 == INVALID_ARGUMENT)
 const EFROM_BYTES: u64 = 0x01_0001;
 
+pub fn make_native_from_func<T: std::marker::Send + std::marker::Sync + 'static>(
+    gas_params: T,
+    func: fn(&T, &mut NativeContext, Vec<Type>, VecDeque<Value>) -> PartialVMResult<NativeResult>,
+) -> NativeFunction {
+    Arc::new(move |context, ty_args, args| func(&gas_params, context, ty_args, args))
+}
+
 /***************************************************************************************************
  * native fun from_bytes
  *
